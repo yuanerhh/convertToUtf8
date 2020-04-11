@@ -1,0 +1,10 @@
+data
+*.cu
+*.cpp
+*.cxx
+*.c
+*.h
+*.hpp
+*.txt
+*.exe
+*.ori
