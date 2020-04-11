@@ -18,12 +18,14 @@ func main() {
 		return
 	}
 
-	// 控制台输出所有log信息
-	log.Verbose = true
+	allFiles, _ := getAllFiles()
+	// 控制台输出log信息控制
+	// true: 打印log  false: 不打印log
+	log.Verbose = false
 
 	files := os.Args[1:]
 	for _, filePattern := range files {
-		fileList, _ := getFileList(filePattern)
+		fileList, _ := getFileList(filePattern, allFiles)
 		for _, file := range fileList {
 			fText, err := ioutil.ReadFile(file)
 			if err != nil {
@@ -37,7 +39,6 @@ func main() {
 				continue
 			}
 
-			fmt.Println(charCode)
 			if charCode == "GB-18030" {
 				oriFile, err := os.OpenFile(file+".ori", os.O_RDWR | os.O_CREATE, 0666)
 				if err != nil {
@@ -116,22 +117,28 @@ func detectCode(src []byte) (string, error) {
 	return result.Charset, nil
 }
 
-func getFileList(filename string) ([]string, error) {
+func getFileList(filename string, fileList []string) ([]string, error) {
 	var res = make([]string, 0, 10)
-	files, err := ioutil.ReadDir("./")
-	if err != nil {
-		log.Error("ioutil.ReadDir failed: %s", err)
-		return nil, err
-	}
-
-	for _, file :=  range files {
-		//fmt.Printf("isdir: %v, filename: %v\n", file.IsDir(), file.Name())
-		if file.IsDir() {
-			continue
-		}
-		if match, _ := filepath.Match(filename, file.Name()); match{
-			res = append(res, file.Name())
+	for _, file :=  range fileList {
+		if match, _ := filepath.Match(filename, file); match{
+			res = append(res, file)
 		}
 	}
 	return res, nil
+}
+
+func getAllFiles() ([]string, error) {
+	var allFiles = make([]string, 0, 100)
+	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			allFiles = append(allFiles, path)
+		}
+		if err != nil {
+			log.Error("Walk err: %s", err)
+			return err
+		}
+		return nil
+	})
+
+	return allFiles, nil
 }
