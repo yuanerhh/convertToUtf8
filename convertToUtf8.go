@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -21,63 +22,67 @@ func main() {
 	log.Verbose = true
 
 	files := os.Args[1:]
-	for _, file := range files {
-		fText, err := ioutil.ReadFile(file)
-		if err != nil {
-			log.Error("ioutil.ReadFile %s failed: %s", file, err)
-			continue
-		}
-
-		charCode, err := detectCode(fText)
-		if err != nil {
-			log.Error("detectCode failed: %s", err)
-			continue
-		}
-
-		fmt.Println(charCode)
-		if charCode == "GB-18030" {
-			oriFile, err := os.OpenFile(file+".ori", os.O_RDWR | os.O_CREATE, 0666)
+	for _, filePattern := range files {
+		fileList, _ := getFileList(filePattern)
+		for _, file := range fileList {
+			fText, err := ioutil.ReadFile(file)
 			if err != nil {
-				log.Error("OpenFile %s failed: %s", file+".ori", err)
+				log.Error("ioutil.ReadFile %s failed: %s", file, err)
 				continue
 			}
 
-			newFile, err := os.OpenFile(file, os.O_RDWR, 0666)
+			charCode, err := detectCode(fText)
 			if err != nil {
-				log.Error("OpenFile %s failed: %s", file, err)
-				oriFile.Close()
+				log.Error("detectCode failed: %s", err)
 				continue
 			}
 
-			_, err = oriFile.Write(fText)
-			if err != nil {
-				log.Error("oriFile.Write failed: %s", err)
-				oriFile.Close()
-				newFile.Close()
-				continue
-			}
+			fmt.Println(charCode)
+			if charCode == "GB-18030" {
+				oriFile, err := os.OpenFile(file+".ori", os.O_RDWR | os.O_CREATE, 0666)
+				if err != nil {
+					log.Error("OpenFile %s failed: %s", file+".ori", err)
+					continue
+				}
 
-			// github.com/saintfish/chardet 只检测 GB-18030
-			// golang.org/x/net/html/charset 不支持 GB-18030，所以只能用GB-2312
-			newContent, err := convertToUtf8(fText, "gbk")
-			if err != nil {
-				log.Error("convertToUtf8 failed: %s", err)
-				oriFile.Close()
-				newFile.Close()
-				continue
-			}
+				newFile, err := os.OpenFile(file, os.O_RDWR, 0666)
+				if err != nil {
+					log.Error("OpenFile %s failed: %s", file, err)
+					oriFile.Close()
+					continue
+				}
 
-			_, err = newFile.Write(newContent)
-			if err != nil {
-				log.Error("newFile.Write failed: %s", err)
-				oriFile.Close()
-				newFile.Close()
-				continue
-			}
+				_, err = oriFile.Write(fText)
+				if err != nil {
+					log.Error("oriFile.Write failed: %s", err)
+					oriFile.Close()
+					newFile.Close()
+					continue
+				}
 
-			fmt.Printf("%s convert from %s to UTF-8 success!\n", file, charCode)
+				// github.com/saintfish/chardet 只检测 GB-18030
+				// golang.org/x/net/html/charset 只能用gbk
+				newContent, err := convertToUtf8(fText, "gbk")
+				if err != nil {
+					log.Error("convertToUtf8 failed: %s", err)
+					oriFile.Close()
+					newFile.Close()
+					continue
+				}
+
+				_, err = newFile.Write(newContent)
+				if err != nil {
+					log.Error("newFile.Write failed: %s", err)
+					oriFile.Close()
+					newFile.Close()
+					continue
+				}
+
+				fmt.Printf("%s convert from %s to UTF-8 success!\n", file, charCode)
+			}
 		}
 	}
+
 }
 
 func convertToUtf8(src []byte, encode string) ([]byte, error) {
@@ -109,4 +114,24 @@ func detectCode(src []byte) (string, error) {
 		result.Charset, result.Language, result.Confidence)
 
 	return result.Charset, nil
+}
+
+func getFileList(filename string) ([]string, error) {
+	var res = make([]string, 0, 10)
+	files, err := ioutil.ReadDir("./")
+	if err != nil {
+		log.Error("ioutil.ReadDir failed: %s", err)
+		return nil, err
+	}
+
+	for _, file :=  range files {
+		//fmt.Printf("isdir: %v, filename: %v\n", file.IsDir(), file.Name())
+		if file.IsDir() {
+			continue
+		}
+		if match, _ := filepath.Match(filename, file.Name()); match{
+			res = append(res, file.Name())
+		}
+	}
+	return res, nil
 }
