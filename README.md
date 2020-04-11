@@ -5,9 +5,13 @@
 
 一、源码安装  
 
-    go get github.com/gpmgo/gopm/modules/log  
+    go get github.com/gpmgo/gopm 
     go get github.com/saintfish/chardet  
-    go get golang.org/x/net/html/charset  
+    
+    mkdir -p $GOPATH/src/golang.org/x
+    cd $GOPATH/src/golang.org/x
+    git clone https://github.com/golang/net.git
+    git clone https://github.com/golang/text.git
   
     go build convertToUtf8.go  
     go install 
@@ -25,4 +29,5 @@ bin目录下有各系统平台的编译好的可执行文件，直接将对应�
     
 ## 注意事项
 
-因为convertToUtf8查询的是当前路径中的所有文件，所以参数只能传入当前目录的文件或者子目录文件。
+1. 因为convertToUtf8查询的是当前路径中的所有文件，所以参数只能传入当前目录的文件或者子目录文件。
+2. 如果有文件需要进行UTF8转码，convertToUtf8会以filename.ori保留原文件的备份，然后将原文件转换为UTF8编码。
