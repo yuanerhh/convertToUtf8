@@ -1,0 +1,2 @@
+# convertToUtf8
+自动检测非UTF8编码的文件并转换为UTF8编码
