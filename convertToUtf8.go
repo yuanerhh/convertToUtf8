@@ -79,6 +79,8 @@ func main() {
 					continue
 				}
 
+				oriFile.Close()
+				newFile.Close()
 				fmt.Printf("%s convert from %s to UTF-8 success!\n", file, charCode)
 			}
 		}
